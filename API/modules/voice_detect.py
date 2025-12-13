@@ -11,7 +11,9 @@ vad_model, _ = torch.hub.load(
 vad = vad_model
 
 
-THRESHOLD = 5/1000  # reduce if mic is quiet
+THRESHOLD = 0.2  # reduce if mic is quiet
+SR = 16000
+PastBuffer_Size = 100 #10 sec 
 BUFFER_SIZE = 8000  # 0.5 sec
 CHUNK = 512        # 0.1 sec
 SILENCE_FRAMES = 40
@@ -19,8 +21,9 @@ SILENCE_FRAMES = 40
 def listen_for_voice():
     print("Waiting for voice...")
 
-    with sd.InputStream(samplerate=16000, channels=1, blocksize=CHUNK) as stream:
+    with sd.InputStream(samplerate=SR, channels=1, blocksize=CHUNK) as stream:
         buffer = []
+        PastBuffer = []
         started = False
         recording = []
         silence_count = 0
@@ -33,6 +36,8 @@ def listen_for_voice():
             audio = np.squeeze(audio).astype(np.float32)
             if started:
                 recording.extend(audio)
+
+
             #will store pre-roll
             if not started:
                 buffer.extend(audio)
@@ -41,16 +46,23 @@ def listen_for_voice():
 
             # threshold / fast pre-check
             level = np.abs(audio).mean()
-            if level < THRESHOLD:
+            PastBuffer.append(level)
+            if len(PastBuffer) > PastBuffer_Size:
+                    PastBuffer = PastBuffer[-PastBuffer_Size:]
+            meanenv = np.abs(PastBuffer).mean()
+            #print(meanenv,THRESHOLD,level,meanenv-level)
+
+            #dynamic audio check!!!
+            if not ((meanenv-level)<-0.1):
                 if started:
                     silence_count+=1
                 continue
-
-            #print("listening..")
+            print("level reached! triggered main check!")
 
             #is voice??
             audio_tensor = torch.from_numpy(audio).unsqueeze(0)
             prob = vad(audio_tensor, 16000).item()
+            print(prob,"prob")
             if (not started) and (prob > 0.7):
                 print("Voice detected, starting record...")
                 started = True

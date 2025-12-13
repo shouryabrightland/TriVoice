@@ -24,25 +24,46 @@ class WhisperAPI:
         """
         model_name: "tiny", "small", "medium", "large" (tiny is best for Pi)
         """
-        print(f"Loading Whisper model: {model_name} ...")
-        self.model = WhisperModel(model_name, device="cpu", compute_type="int8")
+        print("Loading Whisper tiny.en model...")
+        self.model = WhisperModel(
+            "tiny.en",
+            device="cpu",
+            compute_type="int8"
+        )
         self.detector = detector
         self.recording_file = "input.wav"
 
-    def transcribe(self, audio_path):
-        """
-        Transcribes audio file to text
-        """
-        segments, _ = self.model.transcribe(audio_path)
-        text = " ".join([segment.text for segment in segments])
-        return text.strip()
+    #def transcribe(self, audio_path):
+    #    """
+    #    Transcribes audio file to text
+    #    """
+    #    segments, _ = self.model.transcribe(audio_path)
+    #    text = " ".join([segment.text for segment in segments])
+    #    return text.strip()
 
-    def record_and_transcribe(self, duration=5):
+    def record_and_transcribe(self):
         """
         Records audio and immediately transcribes it
         """
-        sf.write(self.recording_file, self.detector.listen_for_voice(), 16000)
+        print('we got num array audio.. now writing')
+        audio = self.detector.listen_for_voice()
+        audio = audio.astype("float32")
+
+        segments, _ = self.model.transcribe(
+            audio,
+            language="en",
+            task="transcribe",
+            beam_size=1,
+            best_of=1,
+            temperature=0.0,
+            vad_filter=True
+        )
+        text = " ".join(s.text for s in segments)
+        print("Transcribed:", text)
+        sf.write(self.recording_file, audio, 16000)
+        print('written... now reading')
         text = self.transcribe(self.recording_file)
         print("we got some text:-",text)
+        return text
         #audio_file = record_audio(self.recording_file, duration)
         #return self.transcribe(audio_file)

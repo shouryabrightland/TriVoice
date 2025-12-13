@@ -14,5 +14,5 @@ class OllamaAPI:
 
         res = requests.post(self.url, json=payload)
         data = res.json()
-
-        return data["message"]["content"]
+        print(data)
+        return data["message"]["content"] or "something went wrong at ollama"
