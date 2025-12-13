@@ -5,16 +5,16 @@ import API.modules.voice_detect as detector
 # ---------------------------
 # Audio recording function
 # ---------------------------
-def record_audio(file_path="input.wav", duration=5, samplerate=16000):
-    """
-    Records audio from microphone and saves as WAV
-    """
-    print(f"Recording {duration} seconds...")
-    audio_data = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1)
-    sd.wait()  # wait until recording is finished
-    sf.write(file_path, audio_data, samplerate)
-    print(f"Saved recording to {file_path}")
-    return file_path
+# def record_audio(file_path="input.wav", duration=5, samplerate=16000):
+#     """
+#     Records audio from microphone and saves as WAV
+#     """
+#     print(f"Recording {duration} seconds...")
+#     audio_data = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1)
+#     sd.wait()  # wait until recording is finished
+#     sf.write(file_path, audio_data, samplerate)
+#     print(f"Saved recording to {file_path}")
+#     return file_path
 
 # ---------------------------
 # Whisper API class
@@ -45,25 +45,27 @@ class WhisperAPI:
         """
         Records audio and immediately transcribes it
         """
-        print('we got num array audio.. now writing')
-        audio = self.detector.listen_for_voice()
-        audio = audio.astype("float32")
+        # i done this so that i can put custom message during debeg in this text var...
+        text = ""
+        while not text:
+            print("initizalising voice to text----------------")
+            audio = self.detector.listen_for_voice()
+            audio = audio.astype("float32")
 
-        segments, _ = self.model.transcribe(
-            audio,
-            language="en",
-            task="transcribe",
-            beam_size=1,
-            best_of=1,
-            temperature=0.0,
-            vad_filter=True
-        )
-        text = " ".join(s.text for s in segments)
+
+            segments, _ = self.model.transcribe(
+                audio,
+                language="en",
+                task="transcribe",
+                beam_size=1,
+                best_of=1,
+                temperature=0.0,
+                vad_filter=False
+            )
+            text = " ".join(s.text for s in segments).strip(" ")
         print("Transcribed:", text)
-        sf.write(self.recording_file, audio, 16000)
-        print('written... now reading')
-        text = self.transcribe(self.recording_file)
-        print("we got some text:-",text)
         return text
-        #audio_file = record_audio(self.recording_file, duration)
-        #return self.transcribe(audio_file)
+        # for debug perpose.. to check what is recording...
+        # sf.write(self.recording_file, audio, 16000)
+        # print('written...')
+        
