@@ -1,29 +1,82 @@
 from API.whisper_api import WhisperAPI
 from API.piper_api import PiperTTS
 from API.ollama_api import OllamaAPI
+import API.modules.norm_msg as norm
+from API.modules.intent import detect_intent
 
-whisper = WhisperAPI()
+
+print("Loading Services...")
 tts = PiperTTS("voices/en_US-lessac-low.onnx")
+print("It's TryVoice")
+tts.speak("It's TryVoice")
+tts.play_wav("effects/song.mp3",volume=0.4,wait=False)
+whisper = WhisperAPI(tts)
 ollama = OllamaAPI()
 
-
 chatHistory = [
-    {"role": "system", "content": "Give short answers. Use simple sentences. Avoid extra words. Do not use markdown or emojis. Talk in a normal speaking style, like you are talking to close friend. Keep replies brief unless the user clearly asks for more"}
+    {"role": "system", "content": '''You are a friendly voice assistant.
+     your name is TryVoice.
+You speak in short, clear sentences.
+You explain things slowly, like talking.
+After explaining, you usually ask a small follow-up question to continue the conversation.
+If the user seems interested or says something short, you continue explaining naturally.
+No markdown. No emojis. No lists.'''}
 ]
-# Whisper
+
+def agent(chatHistory = chatHistory):
+    buffer = ""
+    res = ""
+    for chunk in ollama.ask_stream(chatHistory):
+        if chunk.startswith("[error]"):
+            print(chunk)
+            break
+
+        print(chunk, end="", flush=True)
+        buffer += chunk.strip("\n")
+
+        if buffer.endswith((".", "?", "!", ",")):
+            tts.speak_live(buffer)
+            res += buffer
+            buffer = ""
+    if buffer.strip():
+        tts.speak_live(buffer)
+        res += buffer
+        buffer = ""
+    chatHistory.append({"role": "assistant", "content": res})
+
+
+print("Awaking Agent..")
+agent(chatHistory)
+
 i = 0
 while i<1:
+
+    # Whisper
     print("Whisper...")
     userMessage = whisper.record_and_transcribe()
-    #userMessage = 'what can u do for me'
-    chatHistory.append({"role": "user", "content": userMessage})
+    intent = detect_intent(userMessage)
 
-     # TEST 2: Ollama
-    print("Ollama...")
-    response = ollama.ask(chatHistory)
-    chatHistory.append({"role": "assistant", "content": response})
-    print("Ollama says:", response)
-    # TEST 3: Piper
-    print("Piper...")
-    tts.speak(response, "test2.wav")
+if intent == "EXIT":
+    system_voice.play("goodbye.wav")
+    shutdown()
+
+elif intent == "COMMAND_MODE":
+    system_voice.play("command_mode.wav")
+    enter_command_mode()
+
+elif intent == "PASSIVE":
+    chatHistory.append({
+        "role": "user",
+        "content": "Please continue."
+    })
+    agent(chatHistory)
+
+else:
+    chatHistory.append({
+        "role": "user",
+        "content": userMessage
+    })
+    agent(chatHistory)
+
     
+

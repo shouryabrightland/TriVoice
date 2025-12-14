@@ -18,13 +18,14 @@ CHUNK = 512        # ~0.032 sec
 SILENCE_FRAMES = 50 #~1.6sec
 MAX_AUDIO_LENGTH = 15 #15sec
 
-def listen_for_voice():
+def listen_for_voice(speaker):
     print("Waiting for voice...")
     once = False
     with sd.InputStream(samplerate=SR, channels=1, blocksize=CHUNK) as stream:
         #to check if flow reaching this or not..
         if not once:
             print("started getting buffer...")
+            speaker.play_wav("effects/mic.mp3",volume=1,wait=False)
             once = True
         
         #variables
@@ -67,14 +68,14 @@ def listen_for_voice():
                     PastBuffer = PastBuffer[-PastBuffer_Size:]
             
             #dynamic threshold
-            meanenv = max(sum(PastBuffer)/len(PastBuffer),1e-6) if PastBuffer else 1e-6
-
-            if not (((level/meanenv)*100)-100 > 10):
+            meanenv = max(sum(PastBuffer)/len(PastBuffer),1e-3) if PastBuffer else 1e-3
+            vol = ((level/meanenv)*100) -100
+            if not (vol > 40):
                 #nothing found as activity
                 if started: #increase silent count when recording and no activity detected
                     silence_count+=1
                 continue
-
+            print(vol,meanenv)
             #if we reach here means we detected activity!!
             #runing VAD
             audio_tensor = torch.from_numpy(audio).unsqueeze(0)
@@ -95,7 +96,8 @@ def listen_for_voice():
             else:
                 #if low probability
                 #then also increase silent count
-                silence_count+=1
+                if started:
+                    silence_count+=1
 
     return np.array(recording, dtype=np.float32)
                 

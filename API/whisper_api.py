@@ -20,7 +20,7 @@ import API.modules.voice_detect as detector
 # Whisper API class
 # ---------------------------
 class WhisperAPI:
-    def __init__(self, model_name="tiny"):
+    def __init__(self,speaker, model_name="tiny"):
         """
         model_name: "tiny", "small", "medium", "large" (tiny is best for Pi)
         """
@@ -30,6 +30,8 @@ class WhisperAPI:
             device="cpu",
             compute_type="int8"
         )
+        print("loaded Model successfully...")
+        self.speaker = speaker
         self.detector = detector
         self.recording_file = "input.wav"
 
@@ -49,7 +51,7 @@ class WhisperAPI:
         text = ""
         while not text:
             print("initizalising voice to text----------------")
-            audio = self.detector.listen_for_voice()
+            audio = self.detector.listen_for_voice(self.speaker)
             audio = audio.astype("float32")
 
 
@@ -64,8 +66,8 @@ class WhisperAPI:
             )
             text = " ".join(s.text for s in segments).strip(" ")
         print("Transcribed:", text)
+        sf.write(self.recording_file, audio, 16000)
+        print('written...')
         return text
         # for debug perpose.. to check what is recording...
-        # sf.write(self.recording_file, audio, 16000)
-        # print('written...')
         
