@@ -128,7 +128,7 @@ def intent_middleware(
     # CONFIRM EXIT (soft)
     # -------------------------
     if intent == "exit" and confidence >= 0.6:
-            print("confirm first...")
+            print("")
             result["action"] = "INTENT"
             result["final_text"] = "YES. " + raw_text
             return result

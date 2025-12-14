@@ -4,35 +4,50 @@ from API.ollama_api import OllamaAPI
 from API.modules.chat import Chat
 from API.modules.speaker import Speaker
 from types import FunctionType
+
+from IntentManager.expectation import detect_expectation
+from IntentManager.intent import detect_intents
+# from API.modules.intent import detect_intents
+# from API.modules.expectation import detect_expectation
+
+
+
 class serve:
     def __init__(self,server: FunctionType):
         speaker = Speaker(samplerate=16000)
         print("It's TryVoice")
         speaker.play("effects/try.wav",wait=True)
         print("Loading Services...")
-        self.tts = PiperTTS(speaker,"voices/en_US-lessac-low.onnx")
+        tts = PiperTTS(speaker,"voices/en_US-lessac-low.onnx")
         speaker.play("effects/song.mp3",volume=0.4,wait=False)
         whisper = WhisperAPI(speaker=speaker)
         ollama = OllamaAPI()
         chat = Chat(max_messages=50)
         print("Awaking Agent..")
-        Req = Request(whisper)
-        Res = Response(ollama,self.tts,chat,speaker)
+        Req = Request(whisper,chat=chat)
+        Res = Response(ollama,tts,chat,speaker)
         Res.askAI()
         while not Res.isTerminated:
             #whisper mic
             #try:
-                server(Req.__get__(),Res)
+                server(Req.listen(),Res)
             #except:
             #    Res.exit("server issue")
 
 class Request:
-    def __init__(self,whisper: WhisperAPI):
+    def __init__(self,whisper: WhisperAPI,chat:Chat):
         self.whisper = whisper
         self.message = None
-    def __get__(self):
+        self.intent = None
+        self.chat = chat
+    def listen(self):
         userMessage = self.whisper.record_and_transcribe()
         self.message = userMessage
+        self.intent = detect_intents(userMessage)
+        # exp = detect_expectation(self.chat.get()[-1])
+        # intent = detect_intents(userMessage,exp)
+        #print(intent,exp)
+        #print(intent_middleware(i["user"],intent[1],intent[2],exp))
         return self
 
     
@@ -41,14 +56,20 @@ class Request:
 class Response:
     def __init__(self,ollamaAPI:OllamaAPI,tts:PiperTTS,chat:Chat,speaker:Speaker):
         self.isTerminated = False
+        self.current_expectation = None
         self.ollama = ollamaAPI
         self.tts = tts
         self.chat = chat
         self.speaker = speaker
-           
+        self.payload = {}
+    def expecting(self,expect: str):
+        print("updating expectation" , expect)
+        self.current_expectation = expect
+
     def send(self,message):
         self.tts.speak(message)
         self.chat.add("user",message)
+        print("[Manual]",message)
 
     def exit(self,msg: str = None):
         msg = "Shut Down with no message" if not msg else "shutdown due to "+str(msg)
@@ -82,9 +103,8 @@ class Response:
                 buffer = ""
         if buffer.strip():
             self.tts.speak(buffer)
-            #current_expectation = detect_expectation(res)
+            self.current_expectation = detect_expectation(res)
             res += buffer
             buffer = ""
         
         self.chat.add("assistant", res)
-

@@ -23,4 +23,4 @@ No markdown. No emojis. No lists.''')
         return self.history
 
     def clear(self):
-        self.history = []
+        self.history = [self.history.pop(0)]

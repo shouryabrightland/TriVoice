@@ -75,12 +75,12 @@ def listen_for_voice(speaker: Speaker):
                 if started: #increase silent count when recording and no activity detected
                     silence_count+=1
                 continue
-            print(vol,meanenv)
+            #print(vol,meanenv)
             #if we reach here means we detected activity!!
             #runing VAD
             audio_tensor = torch.from_numpy(audio).unsqueeze(0)
             prob = vad(audio_tensor, 16000).item()
-            print(prob,"probability of speech")
+            #print(prob,"probability of speech")
             if (prob > 0.7):
                  #finally detect voice
 

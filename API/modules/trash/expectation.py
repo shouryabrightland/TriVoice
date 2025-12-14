@@ -5,7 +5,7 @@ EXPECTATIONS = {
     "DETAILS",
     "CONFIRM_EXIT",
     "COMMAND",
-}
+} 
 
 def detect_expectation(last_agent_msg: str):
     if not last_agent_msg:
