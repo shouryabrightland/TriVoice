@@ -4,35 +4,22 @@ import sounddevice as sd
 import soundfile as sf
 import numpy as np
 import time
-
-
+from API.modules.speaker import Speaker
 
 class PiperTTS:
-    def __init__(self, model_path):
+    def __init__(self,OUTPUT: Speaker, model_path):
         self.model_path = model_path
         # Load the voice model
         print("loading Piper voice...",model_path)
         self.voice = PiperVoice.load(model_path)
         print("loaded",model_path)
-        SR = 16000
+        self.speaker = OUTPUT
+        self.stream = OUTPUT.stream
 
-        #for streaming
-        print("opening output stream...")
-        self.stream = sd.OutputStream(samplerate=SR, channels=1, dtype="float32")
-        self.stream.start()
-        print("opened output stream...")
-
-    def play_wav(self, file_path, volume=1.0,wait=True):
-        data, samplerate = sf.read(file_path, dtype="float32")
-        # safety clamp
-        volume = max(0.0, min(volume, 1.0))
-        data *= volume
-        sd.play(data, samplerate)
-        if wait:
-            sd.wait()
-
-
-    def speak(self, text, output_file="output.wav"):
+    def writeWAV(self, text, output_file="output.wav"):
+        '''
+        writes wave
+        '''
         # Open a WAV file and write audio
         with wave.open(output_file, "w") as wf:
             # Configure WAV format
@@ -42,13 +29,19 @@ class PiperTTS:
 
             # Generate audio raw PCM frames
             self.voice.synthesize_wav(text, wf)
-            self.play_wav(output_file)
 
         return output_file
 
-    def speak_live(self, text):
-        sd.stop()
-        CROSSFADE_SAMPLES = 16000   # ~20 ms at 16kHz
+    def speak(self, text,stop=True):
+        '''
+        Play through Stream, don't use IO process
+        '''
+        if stop:
+            sd.stop()
+        
+        
+        SR = self.speaker.SR
+        CROSSFADE_SAMPLES = SR*1   # ~1s at 16kHz
         DELAY = 0.055            # 55 ms
 
         prev_tail = None

@@ -69,5 +69,4 @@ class WhisperAPI:
         sf.write(self.recording_file, audio, 16000)
         print('written...')
         return text
-        # for debug perpose.. to check what is recording...
         

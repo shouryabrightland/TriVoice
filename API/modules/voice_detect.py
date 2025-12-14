@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import sounddevice as sd
-
+from API.modules.speaker import Speaker
 # Load via Torch Hub
 vad_model, _ = torch.hub.load(
     repo_or_dir="models/snakers4_silero-vad_master",
@@ -18,14 +18,14 @@ CHUNK = 512        # ~0.032 sec
 SILENCE_FRAMES = 50 #~1.6sec
 MAX_AUDIO_LENGTH = 15 #15sec
 
-def listen_for_voice(speaker):
+def listen_for_voice(speaker: Speaker):
     print("Waiting for voice...")
     once = False
     with sd.InputStream(samplerate=SR, channels=1, blocksize=CHUNK) as stream:
         #to check if flow reaching this or not..
         if not once:
             print("started getting buffer...")
-            speaker.play_wav("effects/mic.mp3",volume=1,wait=False)
+            speaker.play("effects/mic.mp3",volume=1,wait=False)
             once = True
         
         #variables

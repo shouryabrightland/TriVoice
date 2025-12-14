@@ -1,3 +1,4 @@
+from typing import Generator
 import requests
 import json
 
@@ -7,7 +8,7 @@ class OllamaAPI:
         self.url = "http://localhost:11434/api/chat"
         self.timeout = timeout
 
-    def ask(self, messages):
+    def ask(self, messages) -> str:
         if not messages or not isinstance(messages, list):
             return "I don't have enough context to respond."
 
