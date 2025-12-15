@@ -1,6 +1,7 @@
 import soundfile as sf
 import sounddevice as sd
 from faster_whisper import WhisperModel
+from API.modules.AudioEngine import AudioEngine
 import API.modules.voice_detect as detector
 # ---------------------------
 # Audio recording function
@@ -20,17 +21,18 @@ import API.modules.voice_detect as detector
 # Whisper API class
 # ---------------------------
 class WhisperAPI:
-    def __init__(self,speaker, model_name="tiny"):
+    def __init__(self,speaker:AudioEngine, model_name="tiny"):
         """
         model_name: "tiny", "small", "medium", "large" (tiny is best for Pi)
         """
+        self.SR = speaker.SR
         print("Loading Whisper tiny.en model...")
         self.model = WhisperModel(
             "tiny.en",
             device="cpu",
             compute_type="int8"
         )
-        print("loaded Model successfully...")
+        print("loaded whisper Model successfully...")
         self.speaker = speaker
         self.detector = detector
         self.recording_file = "input.wav"
@@ -66,7 +68,7 @@ class WhisperAPI:
             )
             text = " ".join(s.text for s in segments).strip(" ")
         print("Transcribed:", text)
-        sf.write(self.recording_file, audio, 16000)
+        sf.write(self.recording_file, audio, self.SR)
         print('written...')
         return text
         

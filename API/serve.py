@@ -1,33 +1,31 @@
-from API.modules.speaker import Speaker
-speaker = Speaker(samplerate=16000)
-print("It's TryVoice")
-speaker.play("effects/try.wav",wait=True)
-speaker.play("effects/song.mp3",volume=0.4,wait=False)
-import time
-from API.whisper_api import WhisperAPI
+from API.modules.AudioEngine import AudioEngine
 from API.piper_api import PiperTTS
+Audio = AudioEngine(16000)
+tts = PiperTTS("voices/en_US-lessac-low.onnx",Audio)
+print("It's TryVoice")
+Audio.play_tts_file("effects/try.wav")
+Audio.play_bg_file("effects/song.mp3")
+
+from API.whisper_api import WhisperAPI
 from API.ollama_api import OllamaAPI
 from API.modules.chat import Chat
 from types import FunctionType
 
 from IntentManager.expectation import detect_expectation
 from IntentManager.intent import detect_intents
-# from API.modules.intent import detect_intents
-# from API.modules.expectation import detect_expectation
-
-
 
 class serve:
     def __init__(self,server: FunctionType):
         #time.sleep(1)
         print("Loading Services...")
-        tts = PiperTTS(speaker,"voices/en_US-lessac-low.onnx")
-        whisper = WhisperAPI(speaker=speaker)
-        ollama = OllamaAPI()
+        whisper = WhisperAPI(speaker=Audio)
+        #cli ollama
+        ollama = OllamaAPI("qwen2.5:7b")
         chat = Chat(max_messages=50)
+
         print("Awaking Agent..")
-        Req = Request(whisper,chat=chat)
-        Res = Response(ollama,tts,chat,speaker)
+        Req = Request(whisper,chat=chat,tts=tts,audio=Audio)
+        Res = Response(ollama,tts,chat,Audio)
         Res.askAI()
         while not Res.isTerminated:
             #whisper mic
@@ -37,12 +35,19 @@ class serve:
             #    Res.exit("server issue")
 
 class Request:
-    def __init__(self,whisper: WhisperAPI,chat:Chat):
+    def __init__(self,whisper: WhisperAPI,chat:Chat,tts:PiperTTS,audio:AudioEngine):
         self.whisper = whisper
         self.message = None
         self.intent = None
         self.chat = chat
+        self.tts = tts
+        self.audio = audio
     def listen(self):
+        print("waiting for tts to shut it's mouth")
+        self.tts.q.join() #wait for tts to complete..
+        print("waiting for speaker to shut it's mouth")
+        self.audio.q.join() #wait for speaker 
+        
         userMessage = self.whisper.record_and_transcribe()
         self.message = userMessage
         self.intent = detect_intents(userMessage)
@@ -56,7 +61,7 @@ class Request:
 
 
 class Response:
-    def __init__(self,ollamaAPI:OllamaAPI,tts:PiperTTS,chat:Chat,speaker:Speaker):
+    def __init__(self,ollamaAPI:OllamaAPI,tts:PiperTTS,chat:Chat,speaker:AudioEngine):
         self.isTerminated = False
         self.current_expectation = None
         self.ollama = ollamaAPI
@@ -69,16 +74,16 @@ class Response:
         self.current_expectation = expect
 
     def send(self,message):
-        self.tts.speak(message)
+        self.tts.enqueue(message)
         self.chat.add("user",message)
         print("[Manual]",message)
 
     def exit(self,msg: str = None):
         msg = "Shut Down with no message" if not msg else "shutdown due to "+str(msg)
+        self.tts.enqueue(msg)
         print(msg)
-        self.tts.writeWAV(msg)
-        self.speaker.play("output.wav")
-
+        #self.tts.writeWAV(msg)
+        #self.speaker.play_file("output.wav")
         
         self.isTerminated = True
     
@@ -89,24 +94,24 @@ class Response:
 
         buffer = ""
         res = ""
-
         for chunk in self.ollama.ask_stream(self.chat.get()):
             if chunk.startswith("[error]"):
                 print(chunk)
-                self.tts.speak(chunk)
+                self.tts.enqueue(chunk)
                 break
 
             print(chunk, end="", flush=True)
             buffer += chunk.strip("\n")
 
-            if buffer.endswith((".", "?", "!", ",")):
-                self.tts.speak(buffer)
-                res += buffer
+            if buffer.endswith((".", "?", "!")):
+                self.tts.enqueue(buffer)
                 buffer = ""
-        if buffer.strip():
-            self.tts.speak(buffer)
-            self.current_expectation = detect_expectation(res)
-            res += buffer
-            buffer = ""
+        else:
+            #for last remaining chunks...
+            if buffer.strip():
+                self.tts.enqueue(buffer)
+                res += buffer
+                self.current_expectation = detect_expectation(res)
+                buffer = ""
         
         self.chat.add("assistant", res)
