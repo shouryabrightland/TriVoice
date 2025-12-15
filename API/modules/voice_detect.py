@@ -70,17 +70,20 @@ def listen_for_voice(speaker: Speaker):
             #dynamic threshold
             meanenv = max(sum(PastBuffer)/len(PastBuffer),1e-3) if PastBuffer else 1e-3
             vol = ((level/meanenv)*100) -100
-            if not (vol > 40):
+            #delta(in silence) if meanenv < (noise amount) else delta(in noise)
+            before_start = 190 if meanenv < 0.05 else 60 # delta is more if silence and less if too noise
+            after_start = 40
+            if not (vol > (before_start if not started else after_start)): #40-----
                 #nothing found as activity
                 if started: #increase silent count when recording and no activity detected
                     silence_count+=1
                 continue
-            #print(vol,meanenv)
+            print(vol,meanenv)
             #if we reach here means we detected activity!!
             #runing VAD
             audio_tensor = torch.from_numpy(audio).unsqueeze(0)
             prob = vad(audio_tensor, 16000).item()
-            #print(prob,"probability of speech")
+            print(prob,"probability of speech")
             if (prob > 0.7):
                  #finally detect voice
 

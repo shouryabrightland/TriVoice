@@ -1,8 +1,13 @@
+from API.modules.speaker import Speaker
+speaker = Speaker(samplerate=16000)
+print("It's TryVoice")
+speaker.play("effects/try.wav",wait=True)
+speaker.play("effects/song.mp3",volume=0.4,wait=False)
+import time
 from API.whisper_api import WhisperAPI
 from API.piper_api import PiperTTS
 from API.ollama_api import OllamaAPI
 from API.modules.chat import Chat
-from API.modules.speaker import Speaker
 from types import FunctionType
 
 from IntentManager.expectation import detect_expectation
@@ -14,12 +19,9 @@ from IntentManager.intent import detect_intents
 
 class serve:
     def __init__(self,server: FunctionType):
-        speaker = Speaker(samplerate=16000)
-        print("It's TryVoice")
-        speaker.play("effects/try.wav",wait=True)
+        #time.sleep(1)
         print("Loading Services...")
         tts = PiperTTS(speaker,"voices/en_US-lessac-low.onnx")
-        speaker.play("effects/song.mp3",volume=0.4,wait=False)
         whisper = WhisperAPI(speaker=speaker)
         ollama = OllamaAPI()
         chat = Chat(max_messages=50)
