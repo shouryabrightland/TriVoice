@@ -1,4 +1,4 @@
-import API.modules.words as wordbook
+import API.modules.trash.words as wordbook
 EXPECTATIONS = {
     "NONE",
     "YES_NO",

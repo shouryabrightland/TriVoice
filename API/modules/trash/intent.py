@@ -1,5 +1,5 @@
 import re
-import API.modules.words as wordbook
+import API.modules.trash.words as wordbook
 
 INTENTS = ["exit", "command", "passive", "query", "story","negative"]
 

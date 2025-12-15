@@ -1,7 +1,7 @@
 # intents.py
 INTENT_CONFIG = {
     "shutdown": {
-        "keywords": {"shutdown", "shut", "set", "stop", "down", "exit", "quit"},
+        "keywords": {"shutdown", "shut", "set", "close", "down", "exit", "quit"},
         "agent_required": True,
         "base_weight": 1.0
     },

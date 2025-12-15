@@ -20,7 +20,7 @@ class serve:
         print("Loading Services...")
         whisper = WhisperAPI(speaker=Audio)
         #cli ollama
-        ollama = OllamaAPI("qwen2.5:7b")
+        ollama = OllamaAPI()
         chat = Chat(max_messages=50)
 
         print("Awaking Agent..")
