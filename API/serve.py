@@ -97,6 +97,7 @@ class Response:
         for chunk in self.ollama.ask_stream(self.chat.get()):
             if chunk.startswith("[error]"):
                 print(chunk)
+                
                 self.tts.enqueue(chunk)
                 break
 
