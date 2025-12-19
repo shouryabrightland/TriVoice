@@ -16,6 +16,8 @@ class AudioEngine:
         # Thread-safe stop signal for background audio
         self.bg_stop_event = threading.Event()
 
+        self.bgAllow = True
+
         # Output stream
         self.stream = sd.OutputStream(
             samplerate=self.SR,
@@ -38,6 +40,7 @@ class AudioEngine:
 
     def play_bg_file(self, file_path, volume=0.4):
         """Looping background sound (thinking / listening)"""
+        self.bgAllow = True
         self.q.put(("bg", file_path, volume))
 
     def play_tts_file(self, file_path, volume=1.0):
@@ -52,6 +55,7 @@ class AudioEngine:
 
     def stop_bg(self):
         """Stop background audio immediately"""
+        self.bgAllow = False
         self.bg_stop_event.set()
 
     def shutdown(self):
@@ -71,7 +75,7 @@ class AudioEngine:
             if job == "exit":
                 break
 
-            if job == "bg":
+            if job == "bg" and self.bgAllow:
                 self._play_bg_loop(a, b)
 
             elif job == "tts":
@@ -125,7 +129,7 @@ class AudioEngine:
 
     def _play_samples(self, samples):
         self.bg_stop_event.set()
-        print(self.bg_stop_event.is_set(),"o")
+        #print(self.bg_stop_event.is_set(),"o")
         if samples.ndim > 1:
             samples = samples.mean(axis=1)
 

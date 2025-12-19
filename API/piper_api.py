@@ -14,6 +14,9 @@ class PiperTTS:
         print("loading Piper voice...", model_path)
         self.voice = PiperVoice.load(model_path)
         print("loaded", model_path)
+
+        syn = self.voice.config
+        syn.length_scale = 1.2
         
         self.SR = speaker.SR
         self.speaker = speaker
@@ -29,9 +32,9 @@ class PiperTTS:
     # ---------------------------
     # Public API
     # ---------------------------
-    def enqueue(self, text: str):
+    def enqueue(self, text: str,slow = None):
         """Add text to TTS queue for non-blocking speech"""
-        self.q.put(text)
+        self.q.put((text,slow))
 
     def stop(self):
         """Stop current speaking"""
@@ -47,47 +50,41 @@ class PiperTTS:
     # Internal worker
     # ---------------------------
     def _worker(self):
-        while self.running:
-            text = self.q.get()
-            if text is None:
-                break
+        
+        while True:
+            text, slow = self.q.get()
+            syn = self.voice.config
+            if slow:
+                syn.length_scale = 1.8  # ~10–15% slower
+            else:
+                syn.length_scale = 1.2
 
-            #self.speaking = True
             for samples in self.synthesize_stream(text):
                 self.speaker.play_samples(samples)
-            #if self.q.empty():
+
             self.q.task_done()
-                #self.speaking = False
 
     # ---------------------------
     # Streaming synthesis
     # ---------------------------
-    def synthesize_stream(self, text):
-        CROSSFADE_SAMPLES = self.SR
-        DELAY = 0.055
+    PAUSE_MAP = {
+        ".": ".     ",   # long stop
+        "?": "?     ",
+        "!": "!     ",
+        ",": ",  ",      # short breath
+        ":": ":   ",
+        ";": ";   "
+    }
+    def expand_punctuation(text: str) -> str:
+        for p, repl in PiperTTS.PAUSE_MAP.items():
+            text = text.replace(p, repl)
+        return text
 
-        prev_tail = None
-
-        for chunk in self.voice.synthesize(text):
+    def synthesize_stream(self, text, syn_config=None):
+        for chunk in self.voice.synthesize(text, syn_config=syn_config):
             samples = chunk.audio_float_array
-            if samples is None:
-                continue
-
-            samples = np.asarray(samples, dtype=np.float32)
-
-            # Crossfade to reduce buzz
-            if prev_tail is not None:
-                fade_len = min(CROSSFADE_SAMPLES, len(samples), len(prev_tail))
-                if fade_len > 0:
-                    fade_in = np.linspace(0.0, 1.0, fade_len)
-                    fade_out = 1.0 - fade_in
-                    samples[:fade_len] = (
-                        samples[:fade_len] * fade_in +
-                        prev_tail[-fade_len:] * fade_out
-                    )
-
-            prev_tail = samples[-CROSSFADE_SAMPLES:].copy()
-            yield samples
+            if samples is not None:
+                yield np.asarray(samples, dtype=np.float32)
 
 
 

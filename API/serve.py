@@ -1,3 +1,5 @@
+import random
+import time
 from API.modules.AudioEngine import AudioEngine
 from API.piper_api import PiperTTS
 Audio = AudioEngine(16000)
@@ -43,6 +45,7 @@ class Request:
         self.tts = tts
         self.audio = audio
     def listen(self):
+        self.audio.stop_bg()
         print("waiting for tts to shut it's mouth")
         self.tts.q.join() #wait for tts to complete..
         print("waiting for speaker to shut it's mouth")
@@ -69,11 +72,24 @@ class Response:
         self.chat = chat
         self.speaker = speaker
         self.payload = {}
+
+        self.ACKS = [
+            "Alright.",
+            "Okay.",
+            "Got it.",
+            "One moment.",
+            "Working on that."
+        ]
+        self.ACK_MIN_INTERVAL = 2.5 
+
+
     def expecting(self,expect: str):
         print("updating expectation" , expect)
         self.current_expectation = expect
 
     def send(self,message):
+        #to clear bg audio
+        self.speaker.stop_bg()
         self.tts.enqueue(message)
         self.chat.add("user",message)
         print("[Manual]",message)
@@ -82,34 +98,62 @@ class Response:
         msg = "Shut Down with no message" if not msg else "shutdown due to "+str(msg)
         self.tts.enqueue(msg)
         print(msg)
+        self.speaker.stop_bg()
+        self.speaker.q.join()
         #self.tts.writeWAV(msg)
         #self.speaker.play_file("output.wav")
         
         self.isTerminated = True
     
-    def askAI(self,message: str = None):
+    def askAI(self,message: str = None,fastOut = True):
         #global current_expectation
         if message:
             self.chat.add("user",message)
 
         buffer = ""
         res = ""
+        last_ack_time = 0
+        ack_used = False
+
         for chunk in self.ollama.ask_stream(self.chat.get()):
+            time.sleep(random.uniform(0.2, 0.5))
+
+            # ---------- error ----------
             if chunk.startswith("[error]"):
                 print(chunk)
-                
                 self.tts.enqueue(chunk)
                 break
-
+            
             print(chunk, end="", flush=True)
-            buffer += chunk.strip("\n")
 
-            if buffer.endswith((".", "?", "!")):
-                self.tts.enqueue(buffer)
-                buffer = ""
+            # ---------- ACK injection (latency mask) ----------
+            now = time.time()
+            if (
+                not ack_used
+                and now - last_ack_time > self.ACK_MIN_INTERVAL
+                and buffer.strip() == ""   # only before speech starts
+            ):
+                ack = random.choice(self.ACKS)
+                self.speaker.stop_bg()
+                self.tts.enqueue(ack,slow=True)
+                last_ack_time = now
+                ack_used = True
+
+            # ---------- normal buffering ----------
+            if fastOut:
+                buffer += chunk.strip("\n")
+                if buffer.endswith((".", "?", "!", ",")):
+                    print("using stream")
+
+                    self.speaker.stop_bg()
+                    self.tts.enqueue(buffer)
+                    buffer = ""
+            else:
+                buffer += chunk
         else:
-            #for last remaining chunks...
+            #for last remaining chunks... or final out for slow option
             if buffer.strip():
+                self.speaker.stop_bg()
                 self.tts.enqueue(buffer)
                 res += buffer
                 self.current_expectation = detect_expectation(res)

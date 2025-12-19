@@ -33,4 +33,4 @@ INTENT_CONFIG = {
     },
 }
 
-AGENT_ALIASES = {"try", "tri", "tray", "trie", "dry", "drai", "troy","cry","boys","ways","drag"}
+AGENT_ALIASES = {"try", "tri", "tray", "trie", "dry", "drai", "troy","cry","boys","ways","drag","drive"}

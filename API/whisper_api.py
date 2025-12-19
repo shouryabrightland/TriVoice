@@ -61,7 +61,7 @@ class WhisperAPI:
             audio = self.detector.listen_for_voice(self.speaker)
             audio = audio.astype("float32")
             self.speaker.play_bg_file("effects/think.mp3", volume=0.5)
-            time.sleep(5)
+            #time.sleep(5)---------------------
             t1 = time.perf_counter()
             segments, _ = self.model.transcribe(
                 audio,
@@ -77,6 +77,7 @@ class WhisperAPI:
         t2 = time.perf_counter()
         print("time taken in transcription",(t2-t1)*1000,"ms")
         sf.write(self.recording_file, audio, self.SR)
+
         print('written...')
         return text
         

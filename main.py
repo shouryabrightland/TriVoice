@@ -11,40 +11,36 @@ def server(req:Request, res:Response):
     text = req.message
     intents = boost_by_expectation(req.intent, res.current_expectation)
     print(intents)
-
-
-    # hard middleware actions
-
-    #shutdown if shutdown is high or payload has shutdown and user said yes
-    if (intents.get(SHUTDOWN,0) > 0.75) or (res.payload.get(SHUTDOWN,False) and intents.get(PVE,0)>0.5):
-        res.exit("voice command")
-        return
     
-    #clear memory-------------
-    if (res.payload.get(CLEARM,False) and intents.get(PVE,0)>0.5):
-        res.chat.clear()
-        res.send("cleared chat voice command")
-        res.askAI()
-        return
-    
-
-
-    # if top["intent"] == "command" and top["score"] > 0.6:
-    #     res.send("Command mode ready.")
-    #     return
-
-    # soft expectation example
+    #shutdown
     if intents.get(SHUTDOWN,0) > 0.4:
         res.send("Do you want me to shut down?")
         res.expecting("YES_NO")
         res.payload[SHUTDOWN] = True
         return
+    if res.payload.get(SHUTDOWN,False):
+        if (intents.get(SHUTDOWN,0) > 0.75) or intents.get(PVE,0)>0.5:
+            res.exit("voice command SHUTDOWN")
+            return
+        else:
+            res.payload[SHUTDOWN] = False
+            res.send("okey!")
     
+    #clear memory
     if intents.get(CLEARM,0) > 0.5:
         res.send("Do you want me to clear memory?")
         res.expecting("YES_NO")
         res.payload[CLEARM] = True
         return
+    if res.payload.get(CLEARM,False):
+        if intents.get(PVE,0)>0.5:
+            res.chat.clear()
+            res.send("cleared chat voice command")
+            res.askAI()
+            return
+        else:
+            res.payload[CLEARM] = False
+            res.send("okey!")
 
     #common work...
     #if top["intent"] == SHUTDOWN and top["score"] > 0.4:
