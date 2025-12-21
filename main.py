@@ -1,4 +1,4 @@
-from API.serve import serve,Request,Response
+from API_old.serve import serve,Request,Response
 from IntentManager.expectation import boost_by_expectation
 from IntentManager.intent import detect_intents
 #terms

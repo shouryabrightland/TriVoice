@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import sounddevice as sd
-from API.modules.AudioEngine import AudioEngine
+from API_old.modules.AudioEngine import AudioEngine
 
 # ------------------ Load Silero VAD ------------------
 vad_model, _ = torch.hub.load(

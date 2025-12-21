@@ -1,16 +1,16 @@
 import random
 import time
-from API.modules.AudioEngine import AudioEngine
-from API.piper_api import PiperTTS
+from API_old.modules.AudioEngine import AudioEngine
+from API_old.piper_api import PiperTTS
 Audio = AudioEngine(16000)
 tts = PiperTTS("voices/en_US-lessac-low.onnx",Audio)
 print("It's TryVoice")
 Audio.play_tts_file("effects/try.wav")
 Audio.play_bg_file("effects/song.mp3")
 
-from API.whisper_api import WhisperAPI
-from API.ollama_api import OllamaAPI
-from API.modules.chat import Chat
+from API_old.whisper_api import WhisperAPI
+from API_old.ollama_api import OllamaAPI
+from API_old.modules.chat import Chat
 from types import FunctionType
 
 from IntentManager.expectation import detect_expectation

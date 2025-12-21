@@ -2,8 +2,22 @@ import time
 import soundfile as sf
 import sounddevice as sd
 from faster_whisper import WhisperModel
-from API.modules.AudioEngine import AudioEngine
-import API.modules.voice_detect as detector
+#from API_old.modules.AudioEngine import AudioEngine
+#import API_old.modules.voice_detect as detector
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ---------------------------
 # Audio recording function
 # ---------------------------
